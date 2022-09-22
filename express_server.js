@@ -3,6 +3,7 @@ const app = express();
 const morgan = require('morgan');
 const PORT = 8080; // default port 8080
 const cookieParser = require('cookie-parser');
+const bcrypt = require("bcryptjs");
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
@@ -114,7 +115,6 @@ app.get("/u/:id", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   let user = req.cookies['user_id'];
   if (user) {
-    console.log(urlDatabase)
     if (urlDatabase[req.params.id].userID === user) {
       const templateVars = {
         id: req.params.id,
@@ -133,7 +133,6 @@ app.get("/urls/:id", (req, res) => {
 
 app.post("/urls", (req, res) => {
   if (req.cookies['user_id']) {
-    console.log(req.body); // Log the POST request body to the console
     let shrt = generateRandomString();
     urlDatabase[shrt] = { userID: req.cookies['user_id'], longURL: req.body.longURL };
     const templateVars = {
@@ -183,7 +182,7 @@ app.post("/urls/:id", (req, res) => {
 app.post("/login", (req, res) => {
   let user = getUserByEmail(req.body.email);
   if (user) {
-    if (user.password !== req.body.password) {
+    if (!bcrypt.compareSync(req.body.password, user.password)) {
       res.status(403).send("Incorrect Password.");
     } else {
       res.cookie("user_id", user.id);
@@ -210,9 +209,8 @@ app.post("/register", (req, res) => {
     users[userID] = {
       id: userID,
       email: req.body.email,
-      password: req.body.password
+      password: bcrypt.hashSync(req.body.password, 10)
     };
-    console.log(users);
     res.redirect("/urls");
   }
 });
