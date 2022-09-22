@@ -10,8 +10,14 @@ app.use(cookieParser());
 app.use(morgan('dev'));
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
 };
 
 const users = {
@@ -45,21 +51,34 @@ const getUserByEmail = function (e) {
   return null;
 };
 
+const urlsForUser = function (u) {
+  const urls = {};
+  for (const id in urlDatabase) {
+    if (urlDatabase[id].userID === u) {
+      urls[id] = urlDatabase[id].longURL;
+    }
+  }
+  return urls;
+}
+
 app.get("/urls", (req, res) => {
-  const templateVars = {
-    user: users[req.cookies['user_id']],
-    urls: urlDatabase
-  };
-  res.render("urls_index", templateVars);
+  let id = req.cookies['user_id'];
+  if (id) {
+    const templateVars = {
+      user: users[id],
+      urls: urlsForUser(id)
+    };
+    res.render("urls_index", templateVars);
+  } else {
+    res.send("Please login or register first.")
+  }
 });
 
 app.get("/register", (req, res) => {
   if (req.cookies['user_id']) {
     res.redirect("/urls");
   } else {
-    const templateVars = {
-      user: null
-    };
+    const templateVars = { user: null };
     res.render("registration", templateVars);
   }
 });
@@ -68,54 +87,97 @@ app.get("/login", (req, res) => {
   if (req.cookies['user_id']) {
     res.redirect("/urls");
   } else {
-    const templateVars = {
-      user: null
-    };
+    const templateVars = { user: null };
     res.render("login", templateVars);
   }
 });
 
 app.get("/urls/new", (req, res) => {
-  const templateVars = { user: users[req.cookies['user_id']] };
-  res.render("urls_new", templateVars);
+  if (req.cookies['user_id']) {
+    const templateVars = { user: users[req.cookies['user_id']] };
+    res.render("urls_new", templateVars);
+  } else {
+    res.redirect("/login");
+  }
 });
 
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id];
-  res.redirect(longURL);
+  let reqId = req.params.id;
+  if (urlDatabase[reqId]) {
+    const longURL = urlDatabase[reqId];
+    res.redirect(longURL);
+  } else {
+    res.send("Shortened url does not exist.");
+  }
 });
 
 app.get("/urls/:id", (req, res) => {
-  const templateVars = {
-    id: req.params.id,
-    user: users[req.cookies['user_id']],
-    longURL: urlDatabase[req.params.id]
-  };
-  res.render("urls_show", templateVars);
+  let user = req.cookies['user_id'];
+  if (user) {
+    console.log(urlDatabase)
+    if (urlDatabase[req.params.id].userID === user) {
+      const templateVars = {
+        id: req.params.id,
+        user: users[req.cookies['user_id']],
+        longURL: urlDatabase[req.params.id].longURL
+      };
+      res.render("urls_show", templateVars);
+    } else {
+      res.send("You do not own the URL.");
+    }
+  } else {
+    res.send("You are not logged in.")
+  }
+
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body); // Log the POST request body to the console
-  let shrt = generateRandomString();
-  urlDatabase[shrt] = req.body.longURL;
-  const templateVars = {
-    id: shrt,
-    user: users[req.cookies['user_id']],
-    longURL: urlDatabase[shrt]
-  };
-  res.render("urls_show", templateVars);
+  if (req.cookies['user_id']) {
+    console.log(req.body); // Log the POST request body to the console
+    let shrt = generateRandomString();
+    urlDatabase[shrt] = { userID: req.cookies['user_id'], longURL: req.body.longURL };
+    const templateVars = {
+      id: shrt,
+      user: users[req.cookies['user_id']],
+      longURL: req.body.longURL
+    };
+    res.render("urls_show", templateVars);
+  } else {
+    res.send("Only registered and logged in users can create new tiny URLs.")
+  }
 });
 
 app.post("/urls/:id/delete", (req, res) => {
   let url = req.params.id;
-  delete urlDatabase[url];
-  res.redirect("/urls");
+  if (!urlDatabase[url]) {
+    res.send("The shortened URL does not exist.");
+  } else if (req.cookies['user_id']) {
+    if (urlDatabase[url].userID !== req.cookies['user_id']) {
+      res.send("You do not own the URL.");
+    } else {
+      delete urlDatabase[url];
+      res.redirect("/urls");
+    }
+  } else {
+    res.send("You are not logged in.")
+  }
 });
 
 app.post("/urls/:id", (req, res) => {
   let url = req.params.id;
-  urlDatabase[url] = req.body.newURL;
-  res.redirect("/urls");
+  if (!urlDatabase[url]) {
+    res.send("The shortened URL does not exist.");
+  } else if (req.cookies['user_id']) {
+    if (urlDatabase[url].userID !== req.cookies['user_id']) {
+      res.send("You do not own the URL.");
+    } else {
+      urlDatabase[url].longURL = req.body.newURL;
+      res.redirect("/urls");
+    }
+  } else {
+    res.send("You are not logged in.")
+  }
+
 });
 
 app.post("/login", (req, res) => {
