@@ -59,6 +59,15 @@ const urlsForUser = function(u) {
   return urls;
 };
 
+app.get("/", (req, res) => {
+  let id = req.session.user_id;
+  if (id) {
+    res.redirect("/urls");
+  } else {
+    res.redirect("/login");
+  }
+});
+
 app.get("/urls", (req, res) => {
   let id = req.session.user_id;
   if (id) {
