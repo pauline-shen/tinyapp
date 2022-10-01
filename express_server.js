@@ -112,7 +112,7 @@ app.get("/u/:id", (req, res) => {
 // render the page for the specific shortened url. if user not logged in or not own the url, html message will show
 app.get("/urls/:id", (req, res) => {
   let user = req.session.user_id;
-  if (user) {
+  if (user && urlDatabase[req.params.id]) {
     if (urlDatabase[req.params.id].userID === user) {
       const templateVars = {
         id: req.params.id,
@@ -123,6 +123,8 @@ app.get("/urls/:id", (req, res) => {
     } else {
       res.send("You do not own the URL.");
     }
+  } else if (!urlDatabase[req.params.id]) {
+    res.send("The shortened url does not exist.")
   } else {
     res.send("You are not logged in.");
   }
