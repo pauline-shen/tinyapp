@@ -23,4 +23,4 @@ Showing short URL and its corresponding long URL. Allow user to edit the long UR
 ## Getting Started
 
 - Install all dependencies (using the `npm install` command).
-- Run the development web server using the `node express_server.js` command.
+- Run the development web server using the `npm start` command.
